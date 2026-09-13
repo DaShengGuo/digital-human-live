@@ -1,0 +1,17 @@
+# 音色库 — tts_gateway 按 name 解析到具体推理参数
+# mode=sft 时用 vendor 内置音色; mode=zero_shot 时必须给 ref_wav + ref_text
+voices:
+  default:
+    mode: sft
+    spk_id: 中文女
+    speed: 1.0
+  default_male:
+    mode: sft
+    spk_id: 中文男
+    speed: 1.0
+  # 克隆音色示例: 把参考音频(16k/mono/wav, 3-10s)放到 data/voices/ 下
+  # my_clone:
+  #   mode: zero_shot
+  #   ref_wav: data/voices/my_clone_ref.wav
+  #   ref_text: 这是参考音频对应的文字内容。
+  #   speed: 1.0

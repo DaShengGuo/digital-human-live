@@ -1,0 +1,30 @@
+# RAG 知识库服务配置（唯一参数来源，业务代码零硬编码）
+rag:
+  enabled: true                # 编排器侧总开关（关闭=回退关键词检索）
+  service:
+    host: 127.0.0.1             # 客户端访问地址(编排器/评测脚本用)
+    bind: 0.0.0.0               # 服务监听地址(容器内须 0.0.0.0 才可被端口映射)
+    port: 8021                 # 8010口型/8011 TTS/8020编排器/8030控制台已占用
+  embedding:
+    model: BAAI/bge-small-zh-v1.5
+    device: cpu                # 8G卡: 口型独占CUDA, RAG常驻CPU
+    batch_size: 16
+    max_length: 256
+  rerank:
+    enabled: false             # 评测docs/rag_eval_20260913_151224: 短FAQ场景精排
+                               # 命中率86.8%<纯向量92.1%且题外误命中100%, 故默认关
+    model: BAAI/bge-reranker-base
+    device: cpu
+    top_n: 3                   # 粗排top_k后送精排的条数
+    max_length: 256
+  retrieval:
+    top_k: 10                  # 向量粗排召回数
+    threshold: 0.55            # 余弦相似度命中下限(无精排时生效)
+    rerank_threshold: 0.30     # 精排分命中下限(启用精排时生效)
+    answer_max_chars: 200      # 口播回答截断, 与knowledge.py口径一致
+  index:
+    dir: data/rag_index
+    sync_interval_sec: 60      # 知识条目变更轮询周期
+  knowledge_db: data/dhlive.db
+  client_timeout_sec: 2.5      # 编排器调用超时, 超时/失败回退关键词检索
+  fallback_answer: '这个问题我记下了，稍后详细给大家讲，先继续今天的内容。'

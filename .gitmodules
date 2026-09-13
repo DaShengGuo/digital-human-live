@@ -1,0 +1,6 @@
+[submodule "vendor/LiveTalking"]
+	path = vendor/LiveTalking
+	url = https://github.com/lipku/LiveTalking.git
+[submodule "vendor/CosyVoice"]
+	path = vendor/CosyVoice
+	url = https://github.com/FunAudioLLM/CosyVoice.git

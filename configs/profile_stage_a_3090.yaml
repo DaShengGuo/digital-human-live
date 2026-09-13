@@ -1,0 +1,91 @@
+# =============================================================================
+# 云端档位 — 算家云 RTX 3090 24G + Linux（阶段 A 复测用）
+# 与 fallback_8g 同链路（wav2lip256 + CosyVoice-300M），只改平台相关项：
+#   - venv python: Linux 是 bin/python（Windows 档位是 Scripts/python.exe）
+#   - 显存/温度阈值按 24G 卡放宽，避免看门狗误触发
+# =============================================================================
+
+profile: stage_a_3090
+description: Wav2Lip256 + CosyVoice-300M(CPU) — 云端 3090/Linux 阶段A档
+
+paths:
+  repo_root: ..
+  vendor_livetalking: vendor/LiveTalking
+  vendor_cosyvoice: vendor/CosyVoice
+  python_livetalking: .venv-lt/bin/python
+  python_tts: .venv-lt/bin/python          # 与 LiveTalking 共用 venv
+  logs_dir: logs
+  data_dir: data
+
+livetalking:
+  enabled: true
+  workdir: vendor/LiveTalking
+  entry: app.py
+  model: wav2lip
+  avatar_id: my_avatar_live          # 直播用精简资产(在线加载)
+  avatar_source_id: my_avatar        # 源资产, 保留不动
+  avatar_live_frames: 375            # 25fps × 15s
+  avatar_live_id: my_avatar_live
+  batch_size: 8
+  modelres: 256
+  fps: 25
+  tts: omnitts
+  TTS_SERVER: http://127.0.0.1:8011
+  REF_FILE: default
+  REF_TEXT: ''
+  transport: webrtc
+  listenport: 8010
+  max_session: 2
+  config_file: ''
+  env:
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True,max_split_size_mb:128
+
+tts:
+  enabled: true
+  device: cpu
+  listen_host: 127.0.0.1
+  listen_port: 8011
+  model_dir: vendor/CosyVoice/pretrained_models/CosyVoice-300M-SFT
+  mode: sft
+  spk_id: 中文女
+  sample_rate: 22050
+  stream: true
+  max_text_len: 200
+  env:
+    OMP_NUM_THREADS: '8'
+
+orchestrator:
+  listen_host: 127.0.0.1
+  listen_port: 8020
+  text_queue:
+    max_pending: 16
+    min_interval_ms: 300
+    merge_window_ms: 800
+  watchdog:
+    enabled: true
+    sample_interval_s: 5
+    vram_limit_mb: 20000             # 3090 24G, 放宽阈值
+    vram_rise_window_min: 15
+    vram_rise_threshold_mb: 500
+    fps_floor: 20
+    fps_floor_duration_s: 30
+    temp_limit_c: 85                 # 机房卡, 非笔记本
+    on_vram_exceed: restart_lip
+    degrade_target: null
+  startup:
+    order: [tts, livetalking]
+    ready_timeout_s: 300             # 首次加载模型 + 云端磁盘较慢, 放宽
+    port_probe_interval_s: 2
+
+output:
+  preview_resolution: 720p25
+  obs:
+    check_running: false
+    profile_json: configs/obs_nvenc_720p25.json
+
+logging:
+  dir: logs
+  level: INFO
+  console: true
+  rotate_mb: 20
+  keep_files: 10

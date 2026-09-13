@@ -1,0 +1,90 @@
+# =============================================================================
+# 画质档 profile — OPTIONAL, 仅 bench 通过才允许作为可切换档
+# 启用条件(bench 写回): MuseTalk batch=2 + TTS(CPU) + OBS 通过
+#   峰值<=6.6G / TTFF<=1.5s / 口型>=24fps / 15min 无显存爬升
+# 禁止默认: MuseTalk + CosyVoice2-0.5B 双常驻
+# =============================================================================
+
+profile: quality_8g
+description: MuseTalk batch=2 + CosyVoice-300M(CPU) — 仅 bench 通过后手动切换, 不做默认
+
+paths:
+  repo_root: ..
+  vendor_livetalking: vendor/LiveTalking
+  vendor_cosyvoice: vendor/CosyVoice
+  python_livetalking: .venv-lt/Scripts/python.exe
+  python_tts: .venv-lt/Scripts/python.exe    # 与 LiveTalking 共用 venv（bootstrap 已装 CosyVoice 依赖）
+  logs_dir: logs
+  data_dir: data
+
+livetalking:
+  enabled: true
+  workdir: vendor/LiveTalking
+  entry: app.py
+  model: musetalk
+  avatar_id: musetalk_avatar1
+  batch_size: 2                      # 硬约束: 从 2 起, 禁止默认 8/16
+  fps: 25
+  tts: omnitts
+  TTS_SERVER: http://127.0.0.1:8011
+  REF_FILE: default
+  REF_TEXT: ''
+  transport: webrtc
+  listenport: 8010
+  max_session: 1
+  config_file: ''
+  env:
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True,max_split_size_mb:128
+    LT_IDLE_WINDOW: ''               # 待机动作: 无声时只在嘴部最安静的一小段乒乓循环(留空=自动挑, 见 vendor_patches.md patch 3)
+
+tts:
+  enabled: true
+  device: cpu                        # 必须给口型让 GPU
+  listen_host: 127.0.0.1
+  listen_port: 8011
+  model_dir: vendor/CosyVoice/pretrained_models/CosyVoice-300M-SFT
+  mode: sft
+  spk_id: 中文女
+  sample_rate: 22050
+  stream: true
+  max_text_len: 200
+  env:
+    OMP_NUM_THREADS: '6'
+
+orchestrator:
+  listen_host: 127.0.0.1
+  listen_port: 8020
+  text_queue:
+    max_pending: 12
+    min_interval_ms: 400             # MuseTalk 更吃 GPU, 弹幕节奏放慢
+    merge_window_ms: 1000
+  watchdog:
+    enabled: true
+    sample_interval_s: 5
+    vram_scope: owned                # owned=只统计本项目进程组(推荐) / total=整卡
+    vram_limit_mb: 5000              # 本链口径上限(quality 口型更重)
+    vram_total_cap_mb: 7300          # 整卡接近满只告警, 不重启
+    vram_rise_window_min: 15
+    vram_rise_threshold_mb: 300
+    fps_floor: 20
+    fps_floor_duration_s: 30
+    temp_limit_c: 75
+    on_vram_exceed: degrade
+    degrade_target: stable_8g        # quality 超限降回 stable
+  startup:
+    order: [tts, livetalking]
+    ready_timeout_s: 240             # MuseTalk 加载更慢
+    port_probe_interval_s: 2
+
+output:
+  preview_resolution: 720p25
+  obs:
+    check_running: false
+    profile_json: configs/obs_nvenc_720p25.json
+
+logging:
+  dir: logs
+  level: INFO
+  console: true
+  rotate_mb: 20
+  keep_files: 10

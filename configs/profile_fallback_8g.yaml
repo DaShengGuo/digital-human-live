@@ -1,0 +1,136 @@
+# =============================================================================
+# 兼容档 profile — Ultralight 出问题才用, 不当第一默认
+# Wav2Lip256: 最成熟、显存最低, 但口型清晰度差一档 (256 分辨率)
+# =============================================================================
+
+profile: fallback_8g
+description: Wav2Lip256 + CosyVoice-300M(CPU) — 兼容档
+
+paths:
+  repo_root: ..
+  vendor_livetalking: vendor/LiveTalking
+  vendor_cosyvoice: vendor/CosyVoice
+  python_livetalking: .venv-lt/Scripts/python.exe
+  python_tts: .venv-lt/Scripts/python.exe    # 与 LiveTalking 共用 venv（bootstrap 已装 CosyVoice 依赖; .venv-tts 不存在, 禁止静默回退系统 python）
+  logs_dir: logs
+  data_dir: data
+
+livetalking:
+  enabled: true
+  workdir: vendor/LiveTalking
+  entry: app.py
+  model: wav2lip
+  avatar_id: my_avatar_live          # A4: 直播用精简资产(在线加载), 由 prepare_live_avatar 生成
+  avatar_source_id: my_avatar        # 源资产(3721帧/10.3GB 内存成本), 保留不动
+  avatar_live_frames: 375            # 25fps × 15s; 内存 ~1.1GB (原全量 ≈10.3GB 笔记本不可接受)
+  avatar_live_id: my_avatar_live     # 生成目标名; 乒乓循环首尾无跳变
+  batch_size: 8                      # README: wav2lip256@RTX3060≈60fps, 余量大
+  modelres: 256
+  fps: 25
+  tts: omnitts
+  TTS_SERVER: http://127.0.0.1:8011
+  REF_FILE: default
+  REF_TEXT: ''
+  transport: webrtc
+  # push_url: rtmp://127.0.0.1/live/livestream   # transport=rtmp/rtcpush 时必配（无预览页直推流媒体服务器）
+  # LLM 智能问答（编排器 POST /chat 或 vendor /human type=chat 时生效; 默认关）:
+  #   密钥走环境变量不入库: setx DASHSCOPE_API_KEY sk-xxx（or orcarouter 用 ORCAROUTER_API_KEY）
+  # llm_provider: dashscope           # dashscope / orcarouter（OpenAI 兼容）
+  # llm_model: qwen-plus
+  listenport: 8010
+  max_session: 2
+  config_file: ''
+  env:
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True,max_split_size_mb:128
+    # 待机动作: 无声时只在「嘴部最安静的一小段」内乒乓循环 —— 人仍在眨眼/点头/
+    # 身体微动, 但不是"一直讲话"的样子, 也不是一张静止照片。
+    #   "起,止" = 指定帧号区间(半开); 留空/不写 = 启动时自动挑; "off" = 上游整段循环。
+    # 见 docs/vendor_patches.md patch 3
+    LT_IDLE_WINDOW: ''
+
+tts:
+  enabled: true
+  device: cpu
+  listen_host: 127.0.0.1
+  listen_port: 8011
+  model_dir: vendor/CosyVoice/pretrained_models/CosyVoice-300M-SFT
+  mode: sft
+  spk_id: 中文女
+  sample_rate: 22050
+  stream: true
+  max_text_len: 200
+  # 音频缓存落盘目录: 预热过的整段话术重启后仍命中(0 延迟)。本机 CPU 合成 RTF≈10,
+  # 不预热的话直播间会一直"讲一句等半天"。留空 = 只用内存缓存。
+  cache_dir: data/tts_cache
+  env:
+    OMP_NUM_THREADS: '6'
+
+orchestrator:
+  listen_host: 127.0.0.1
+  listen_port: 8020
+  # 会话绑定: page=绑定浏览器页面(8010/index.html)建立的WebRTC会话（生产,
+  # 伴侣捕获的页面即观众所见）; aiortc=编排器自建会话（开发自检, 无对外画面）
+  session_bind: page
+  text_queue:
+    max_pending: 16
+    min_interval_ms: 300
+    merge_window_ms: 800
+  # 派发后多久内仍算"可能还在合成/播放"（导演据此判断忙闲）。上游 90s 太长:
+  # CPU 合成慢时导演一句要等 1.5 分钟才派下一句 → 直播间"说两句静默一分半"。
+  # 缓存预热后合成≈0s, 8s 足够覆盖"派发→出声"的空窗; 未命中时句子会在
+  # LiveTalking 内排队顺序播, 不丢句。
+  dispatch_grace_s: 8
+  watchdog:
+    enabled: true
+    sample_interval_s: 5
+    # 显存口径: owned=只统计本项目进程组(推荐; 由 scripts/gpu_owned_sampler.ps1 采样),
+    # total=整卡(上游行为, 会把 Chrome/VS Code/直播伴侣的占用算进来 → 一旦桌面忙就误判重启)
+    vram_scope: owned
+    vram_limit_mb: 4000              # 本链口径上限(实测本链 ~1.0-1.5G, 留泄漏余量)
+    vram_total_cap_mb: 7300          # 整卡接近满只告警, 不重启(那不是本链能修的)
+    vram_owned_cache_s: 30           # 进程级显存查询结果缓存(查询走 PowerShell, 单次 1~6s)
+    vram_owned_timeout_s: 25         # 查询超时 → 本轮不做显存判罚(不退回整卡口径误杀)
+    vram_rise_window_min: 15
+    vram_rise_threshold_mb: 300
+    fps_floor: 20
+    fps_floor_duration_s: 30
+    temp_limit_c: 75
+    on_vram_exceed: restart_lip      # 最低档没有再降空间, 只重启
+    degrade_target: null
+  startup:
+    order: [tts, livetalking]
+    ready_timeout_s: 180
+    port_probe_interval_s: 2
+
+output:
+  preview_resolution: 720p25
+  obs:
+    check_running: false
+    profile_json: configs/obs_nvenc_720p25.json
+
+# 话术导演（直播要求: 一直在讲）:
+#   一轮话术播完 → 空闲 idle_gap_s → 立刻开下一轮; 期间有任何新文本(弹幕/插播)
+#   先让它播完再继续。idle_gap_s=0/很小 = 连续口播（直播常态）; 想"讲一轮歇一会儿"
+#   就把它调大（旧值 300 = 停 5 分钟, 直播间会觉得没人）。
+director:
+  idle_gap_s: 5
+
+# 弹幕 OCR（阶段G）: 读「抖音直播伴侣」窗口里的观众弹幕 → 弹幕管线(source=ocr)
+# 选型依据 docs/bench_danmaku_ocr_*.md: OCR 零显存/裁ROI后 0.56~1.3s/召回≈92%;
+# 通用视觉模型(qwen2.5vl:7b)加载即占 5.13G 显存, 与数字人共存时单图 179s → 排除。
+danmaku_ocr:
+  enabled: false                     # 默认关; 控制台点「启动弹幕OCR」才拉起
+  python: D:/Python39/python.exe     # 装 rapidocr 的解释器(项目 venv 未装且 pip 通道不可用)
+  window_title: 直播伴侣             # 窗口标题关键字（模糊匹配）
+  roi: [0.02, 0.30, 0.35, 0.60]      # [x,y,w,h] 相对窗口的比例 —— 必须按实际界面标定!
+  interval_s: 1.5                    # 取词间隔
+  min_confidence: 0.6                # OCR 置信度下限
+  dedupe_ttl_s: 60                   # 同一句多久内不重复投递
+  ingest_url: http://127.0.0.1:8030/danmaku/ingest
+
+logging:
+  dir: logs
+  level: INFO
+  console: true
+  rotate_mb: 20
+  keep_files: 10

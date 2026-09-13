@@ -1,0 +1,7 @@
+faiss-cpu
+sentence-transformers
+fastapi
+uvicorn
+pyyaml
+numpy
+huggingface_hub

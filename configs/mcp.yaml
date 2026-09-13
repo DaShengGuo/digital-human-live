@@ -1,0 +1,8 @@
+# MCP Server 配置（唯一参数来源; AI 客户端接入见 docs/mcp.md）
+mcp:
+  name: dhlive-digital-human
+  services:
+    orchestrator: http://127.0.0.1:8020   # 编排器(start.ps1 拉起)
+    rag: http://127.0.0.1:8021            # RAG 知识库(rag_start.ps1)
+  timeout_sec: 3.0                        # 常规调用超时
+  say_timeout_sec: 10.0                   # 口播派发等待(入队+vendor转发)

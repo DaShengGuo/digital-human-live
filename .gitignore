@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 模型权重与大数据（绝不入库）
+vendor/LiveTalking/models/
+vendor/LiveTalking/data/avatars/
+vendor/CosyVoice/pretrained_models/
+vendor/Ultralight-Digital-Human/
+vendor/Wav2Lip-lfs/
+vendor/Wav2Lip-ref/
+data/raw/
+*.pth
+*.pt
+*.onnx
+*.tar
+*.tar.gz
+*.safetensors
+*.bin
+
+# 运行产物
+logs/*
+!logs/.gitkeep
+data/record/
+data/tmp/
+*.pid
+*.state
+
+# IDE / 系统
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+.venv-lt/
+
+# 弹幕OCR基准测试的图片副本（结论保留在 docs/ 与 JSON）
+data/bench_danmaku/*.png
+data/out/_tmp_frames/
+
+# 开源清理: 本地数据/环境/产物一律不入库
+data/
+logs/
+*.db
+*.db-shm
+*.db-wal
+.venv*/
+console_vue/node_modules/
+console_vue/dist/

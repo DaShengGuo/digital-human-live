@@ -1,0 +1,38 @@
+{
+  "_comment": "OBS NVENC 720p25 配置样例 — 手动导入 OBS 后参照本文件设置, OBS 本身不读此文件",
+  "output": {
+    "mode": "advanced",
+    "encoder": "NVENC H.264 (new)",
+    "preset": "P5 (slowest, best quality)",
+    "tuning": "ll (low latency)",
+    "multipass": "qres",
+    "rate_control": "CBR",
+    "bitrate_kbps": 4500,
+    "keyframe_interval_s": 2,
+    "psycho_visual_tuning": true,
+    "look_ahead": false,
+    "max_b_frames": 2
+  },
+  "video": {
+    "base_canvas": "1920x1080",
+    "output_resolution": "1280x720",
+    "fps": {"common": "25"}
+  },
+  "audio": {
+    "sample_rate": 44100,
+    "bitrate_kbps": 160,
+    "encoder": "ffmpeg_aac"
+  },
+  "advanced": {
+    "renderer": "Direct3D 11",
+    "color_format": "NV12",
+    "color_space": "709",
+    "gpu_index": 0
+  },
+  "_notes": [
+    "OBS 默认就跑在独显上; 如误用核显, 设置里手动指定 GPU 为 RTX 4060",
+    "NVENC 是独立编码单元, 不吃 CUDA 显存, 但驱动/D3D context 约占 0.3-0.8G",
+    "直播时把编排骨架进程组显存预算压到 6.6G 以内就是为了给 OBS 留余量",
+    "不要用 OBS 浏览器源加载 LiveTalking 页面当画面源 — 用虚拟摄像头或窗口捕获"
+  ]
+}

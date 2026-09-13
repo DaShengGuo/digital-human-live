@@ -1,0 +1,22 @@
+# =============================================================================
+# 默认入口配置 — scripts/start.ps1 不带 -Profile 时读取本文件
+# 决策树结论写回这里（bench 后更新 status 字段）
+# =============================================================================
+
+# 当前默认档位: stable_8g
+# bench 决策记录（更新此映射前必须先跑 bench_vram 并留报告）:
+#   stable_8g  : pending  (待冒烟+15min bench)
+#   quality_8g : disabled_reason=need_bench_evidence   # MuseTalk 未实测前禁止默认
+#   fallback_8g: available                              # 兼容档，Ultralight 故障时手动切
+default_profile: stable_8g
+available_profiles: [stable_8g, fallback_8g, stage_a_3090]
+disabled_profiles:
+  quality_8g:
+    reason: need_bench_evidence
+    note: MuseTalk batch=2 + TTS(CPU) 通过 <=6.6G / TTFF<=1.5s / >=24fps / 无爬升 后才允许手动启用
+
+# 降级链: stable 出问题自动/手动降到哪一档
+fallback_chain:
+  stable_8g: fallback_8g
+  quality_8g: stable_8g
+  fallback_8g: null   # 最低档，只重启

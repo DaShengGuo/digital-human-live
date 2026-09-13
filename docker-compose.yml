@@ -1,0 +1,20 @@
+# dhlive 服务编排: docker compose up rag -d
+# 注意: HF_CACHE 卷路径为本机缓存位置, 迁移机器时同步修改
+services:
+  rag:
+    build:
+      context: .
+      dockerfile: docker/rag.Dockerfile
+    container_name: dhlive-rag
+    ports:
+      - "8021:8021"
+    volumes:
+      - ./configs:/app/configs:ro              # 配置唯一来源(挂载保证与宿主一致)
+      - ./data:/app/data                       # knowledge 库 + 索引落盘
+      - C:/Users/郭宝盛/.cache/huggingface:/root/.cache/huggingface  # 模型缓存免重复下载
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8021/healthz')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped

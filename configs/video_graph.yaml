@@ -1,0 +1,11 @@
+# 视频生产多 Agent 状态图配置（唯一参数来源）
+video_graph:
+  max_iterations: 3          # review 拒绝后 prompt_agent 最多回环重写次数
+  generate:
+    backend: mock            # mock=演示闭环 | comfyui=真实 ComfyUI API(需服务在线)
+    comfyui_api: http://127.0.0.1:8188
+    comfyui_workflow: workflows/smoke_test_h3_api.json
+    poll_interval_sec: 5
+    output_dir: data/video_graph
+  review:
+    min_score: 0.7           # 达标线; mock 评审用确定性评分, comfyui 后端接 Qwen-VL

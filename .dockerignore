@@ -1,0 +1,12 @@
+# 构建上下文瘦身: vendor/模型/缓存一律不进镜像
+vendor/
+data/
+logs/
+models/
+console_vue/node_modules/
+console_vue/dist/
+.venv*/
+**/__pycache__
+*.db
+*.log
+.git/
